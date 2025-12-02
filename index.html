@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Green Turtles Interactive Reading & Quiz</title>
+    <style>
+        /* GENEL VE METİN STİLİ */
+        body {
+            font-family: Arial, sans-serif;
+            padding: 0;
+            margin: 0;
+            line-height: 1.6;
+            color: #333;
+            background-color: white;
+            position: relative;
+            overflow-x: hidden;
+        }
+        .main-container {
+            padding: 20px;
+            max-width: 600px;
+            margin: 0 auto;
+            transition: margin-right 0.5s;
+        }
+        h1 { color: #333; font-size: 28px; margin-bottom: 5px; }
+        .info-bar { display: flex; align-items: center; margin-bottom: 20px; color: #666; font-size: 14px; }
+        .info-bar span { margin-right: 15px; }
+        
+        /* DURUM ÇUBUĞU STİLİ (Okundu İşaretle) */
+        .info-bar .status { 
+            font-weight: bold; 
+            color: #666; /* Varsayılan Metin Grisi */
+            margin-left: auto; 
+            background-color: #e0e0e0; /* Varsayılan Arka Plan Grisi */
+            padding: 5px 10px; 
+            border-radius: 5px; 
+            transition: all 0.2s; 
+            cursor: pointer;
+            user-select: none;
+        }
+
+        /* AKTİF DURUM STİLİ (Okundu işaretlendiğinde yeşil) */
+        .info-bar .status.read-status-active {
+            color: white; 
+            background-color: #79a109; /* Yeşil renk */
+        }
+
+        /* VURGULU KELİMELER ve GÖRSEL STİLİ */
+        .highlight { color: #79a109; font-weight: 500; }
+        .article-image { width: 100%; height: auto; max-height: 250px; object-fit: cover; border-radius: 8px; margin-bottom: 20px; }
+
+        /* CÜMLE VE ÇEVİRİ STİLİ (Önemli Kısım) */
+        .sentence-paragraph {
+            position: relative;
+            margin-bottom: 5px; 
+            cursor: pointer;
+            padding: 5px 0;
+            border-bottom: 1px dotted #ccc; 
+            transition: background-color 0.2s;
+        }
+        .sentence-paragraph:hover { background-color: #f9f9f9; }
+        .english-text { display: block; font-size: 16px; }
+        
+        /* Çeviri Arka Planı Yeşil */
+        .translation-tooltip {
+            visibility: hidden;
+            opacity: 0;
+            height: 0;
+            padding: 0 10px;
+            transition: opacity 0.3s, height 0.3s, padding 0.3s, visibility 0.3s;
+            width: 95%;
+            background-color: #5cb85c; 
+            color: white;
+            text-align: left;
+            border-radius: 4px;
+            margin-top: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            font-size: 14px;
+            font-style: italic;
+            overflow: hidden;
+            user-select: none;
+        }
+        /* Aktif cümleye tıklandığında çeviriyi göster */
+        .sentence-paragraph.active .translation-tooltip {
+            visibility: visible;
+            opacity: 1;
+            height: auto; 
+            padding: 8px 10px;
+            margin-bottom: 15px; 
+        }
+        
+        /* SIDEBAR VE QUIZ STİLLERİ */
+        .words-sidebar { height: 100%; width: 300px; position: fixed; z-index: 20; top: 0; right: 0; background-color: white; overflow-y: auto; padding-top: 20px; transform: translateX(300px); transition: transform 0.5s; box-shadow: -5px 0 15px rgba(0,0,0,0.1); }
+        .words-sidebar.open { transform: translateX(0); }
+        .sidebar-content { padding: 0 20px 20px 20px; }
+        .main-container.pushed { margin-right: 300px; }
+        .word-item { margin-bottom: 15px; padding-bottom: 5px; border-bottom: 1px solid #eee; }
+        .english-word { font-weight: bold; color: #333; line-height: 1.2; display: block; }
+        .word-type { font-style: italic; color: #79a109; font-size: 13px; margin-right: 5px; }
+        .turkish-translation { color: #666; font-size: 14px; display: block; margin-left: 0; }
+        .top-buttons { position: fixed; top: 0; right: 0; left: 0; z-index: 30; display: flex; justify-content: flex-end; padding: 10px 10px 5px 10px; background-color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .top-buttons button { background-color: #007bff; color: white; border: none; padding: 8px 15px; font-size: 16px; cursor: pointer; border-radius: 20px; margin-left: 10px; }
+        #toggleSidebarButton { background-color: #f1f1f1; color: #333; }
+        #toggleQuizButton { background-color: #5bc0de; } 
+        #toggleQuestionsButton { background-color: #79a109; } /* Sorular butonu yeşil */
+        .close-btn { position: absolute; top: 15px; left: 20px; font-size: 30px; color: #aaa; cursor: pointer; }
+        
+        /* WORD QUIZ STİLLERİ */
+        .quiz-container { display: none; padding: 20px; max-width: 400px; margin: 0 auto; text-align: center; padding-top: 70px; }
+        
+        /* QUESTIONS QUIZ STİLİ (Kelime Quiz'den biraz daha geniş) */
+        #questionsQuizContainer {
+            max-width: 600px;
+        }
+
+        .quiz-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; color: #666; }
+        .quiz-word-box { font-size: 36px; font-weight: bold; margin-bottom: 30px; color: #333; }
+        .quiz-word-type { font-style: italic; color: #79a109; font-size: 18px; display: block; margin-bottom: 10px; }
+        .option-button { width: 100%; padding: 15px 20px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 12px; background-color: #f9f9f9; text-align: center; cursor: pointer; font-size: 18px; font-weight: 500; transition: all 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.05); position: relative; }
+        /* Questions Quiz için seçenek stili */
+        .question-option { text-align: left; font-size: 16px; padding: 12px 15px; }
+
+        .correct { background-color: #79a109; color: white; border-color: #79a109; }
+        .wrong { background-color: #ff4d4d; color: white; border-color: #ff4d4d; }
+        .check-mark { font-size: 60px; color: white; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: none; z-index: 10; background-color: rgba(121, 161, 9, 0.95); border-radius: 50%; width: 80px; height: 80px; line-height: 80px; box-shadow: 0 0 15px rgba(0,0,0,0.3); font-weight: bold; }
+        .correct.selected .check-mark { display: block; }
+        .progress-bar-container { height: 8px; background-color: #eee; border-radius: 4px; margin-bottom: 20px; overflow: hidden; }
+        .progress-bar { height: 100%; width: 0%; background-color: #79a109; transition: width 0.3s; }
+        .quiz-results { display: none; text-align: center; }
+        .quiz-results h2 { color: #79a109; font-size: 30px; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="top-buttons">
+    <button id="toggleSidebarButton">W Kelimeler</button>
+    <button id="toggleQuizButton" style="background-color: #5bc0de;">Word Quiz</button>
+        <button id="toggleQuestionsButton" style="background-color: #79a109;">Questions</button> 
+</div>
+
+<div id="wordsSidebar" class="words-sidebar">
+    <span class="close-btn" id="closeSidebarButton">&times;</span>
+    <div class="sidebar-content">
+        <h1>Kelimeler (26 Kelime)</h1>
+        <div class="word-item"><span class="english-word">turtle</span><span class="word-type">noun.</span><span class="turkish-translation">deniz kaplumbağası, kaplumbağa</span></div>
+        <div class="word-item"><span class="english-word">large / big</span><span class="word-type">adj.</span><span class="turkish-translation">büyük, iri</span></div>
+        <div class="word-item"><span class="english-word">live</span><span class="word-type">verb.</span><span class="turkish-translation">yaşamak</span></div>
+        <div class="word-item"><span class="english-word">ocean / sea</span><span class="word-type">noun.</span><span class="turkish-translation">okyanus / deniz</span></div>
+        <div class="word-item"><span class="english-word">like</span><span class="word-type">verb.</span><span class="turkish-translation">hoşlanmak, sevmek</span></div>
+        <div class="word-item"><span class="english-word">warm</span><span class="word-type">adj.</span><span class="turkish-translation">ılık, sıcacık</span></div>
+        <div class="word-item"><span class="english-word">beach</span><span class="word-type">noun.</span><span class="turkish-translation">plaj, sahil</span></div>
+        <div class="word-item"><span class="english-word">swim</span><span class="word-type">verb.</span><span class="turkish-translation">yüzmek</span></div>
+        <div class="word-item"><span class="english-word">fast</span><span class="word-type">adj.</span><span class="turkish-translation">hızlı</span></div>
+        <div class="word-item"><span class="english-word">flipper</span><span class="word-type">noun.</span><span class="turkish-translation">yüzgeç (hayvan)</span></div>
+        <div class="word-item"><span class="english-word">adult</span><span class="word-type">noun.</span><span class="turkish-translation">yetişkin</span></div>
+        <div class="word-item"><span class="english-word">eat</span><span class="word-type">verb.</span><span class="turkish-translation">yemek</span></div>
+        <div class="word-item"><span class="english-word">plant / seaweed</span><span class="word-type">noun.</span><span class="turkish-translation">bitki / deniz yosunu</span></div>
+        <div class="word-item"><span class="english-word">danger</span><span class="word-type">noun.</span><span class="turkish-translation">tehlike</span></div>
+        <div class="word-item"><span class="english-word">nest</span><span class="word-type">noun.</span><span class="turkish-translation">yuva</span></div>
+        <div class="word-item"><span class="english-word">egg</span><span class="word-type">noun.</span><span class="turkish-translation">yumurta</span></div>
+        <div class="word-item"><span class="english-word">clean</span><span class="word-type">adj.</span><span class="turkish-translation">temiz</span></div>
+        <div class="word-item"><span class="english-word">keep safe</span><span class="word-type">verb.</span><span class="turkish-translation">güvende tutmak, korumak</span></div>
+        <div class="word-item"><span class="english-word">animal</span><span class="word-type">noun.</span><span class="turkish-translation">hayvan</span></div>
+        <div class="word-item"><span class="english-word">brown / yellow</span><span class="word-type">adj.</span><span class="turkish-translation">kahverengi / sarı</span></div>
+        <div class="word-item"><span class="english-word">kind</span><span class="word-type">noun.</span><span class="turkish-translation">tür, çeşit</span></div>
+        <div class="word-item"><span class="english-word">strong</span><span class="word-type">adj.</span><span class="turkish-translation">güçlü, sağlam</span></div>
+        <div class="word-item"><span class="english-word">leg</span><span class="word-type">noun.</span><span class="turkish-translation">bacak</span></div>
+        <div class="word-item"><span class="english-word">long</span><span class="word-type">adj.</span><span class="turkish-translation">uzun</span></div>
+        <div class="word-item"><span class="english-word">young</span><span class="word-type">adj.</span><span class="turkish-translation">genç, yavru</span></div>
+        <div class="word-item"><span class="english-word">important</span><span class="word-type">adj.</span><span class="turkish-translation">önemli</span></div>
+    </div>
+</div>
+
+<div id="mainContent" class="main-container" style="padding-top: 70px;"> 
+    <h1>Green Turtles</h1>
+    <div class="info-bar">
+        <span>🕒 1 min</span>
+        <span>W 108 words</span>
+                <span class="status" id="readStatus">Okundu olarak işaretle</span>
+    </div>
+    
+    <img src="https://via.placeholder.com/600x250/79a109/ffffff?text=Green+Turtle+Underwater+Image" alt="Green Turtle underwater" class="article-image">
+    
+    <p class="sentence-paragraph">
+        <span class="english-text">Green <span class="highlight">turtles</span> are <span class="highlight">big</span> <span class="highlight">animal</span>s.</span>
+        <span class="translation-tooltip">Yeşil kaplumbağalar büyük hayvanlardır.</span>
+    </p>
+    <p class="sentence-paragraph">
+        <span class="english-text">They are a <span class="highlight">kind</span> of sea <span class="highlight">turtle</span>.</span>
+        <span class="translation-tooltip">Onlar bir tür deniz kaplumbağasıdır.</span>
+    </p>
+    <p class="sentence-paragraph">
+        <span class="english-text">Their name is "Green Turtle," but they are often <span class="highlight">brown / yellow</span>.</span>
+        <span class="translation-tooltip">İsimleri "Yeşil Kaplumbağa"dır, ancak genellikle kahverengi veya sarıdırlar.</span>
+    </p>
+    <p class="sentence-paragraph">
+        <span class="english-text">They <span class="highlight">live</span> in the <span class="highlight">ocean</span>.</span>
+        <span class="translation-tooltip">Okyanusta yaşarlar.</span>
+    </p>
+
+    <div style="margin-top: 20px;"></div>
+    
+    <p class="sentence-paragraph">
+        <span class="english-text">Green <span class="highlight">turtles</span> <span class="highlight">like</span> <span class="highlight">warm</span> water.</span>
+        <span class="translation-tooltip">Yeşil kaplumbağalar ılık suyu sever.</span>
+    </p>
+    <p class="sentence-paragraph">
+        <span class="english-text">They <span class="highlight">live</span> in <span class="highlight">warm</span> places <span class="highlight">like</span> near <span class="highlight">beaches</span>.</span>
+        <span class="translation-tooltip">Plajlara yakın ılık yerlerde yaşarlar.</span>
+    </p>
+    <p class="sentence-paragraph">
+        <span class="english-text">They <span class="highlight">swim</span> very <span class="highlight">fast</span>.</span>
+        <span class="translation-tooltip">Çok hızlı yüzerler.</span>
+    </p>
+    <p class="sentence-paragraph">
+        <span class="english-text">They use their <span class="highlight">strong</span> <span class="highlight">leg</span>s (<span class="highlight">flipper</span>s) to <span class="highlight">swim</span>.</span>
+        <span class="translation-tooltip">Yüzmek için güçlü bacaklarını (yüzgeçlerini) kullanırlar.</span>
+    </p>
+    
+    <div style="margin-top: 20px;"></div>
+
+    <p class="sentence-paragraph">
+        <span class="english-text">A small green <span class="highlight">turtle</span> is very small.</span>
+        <span class="translation-tooltip">Küçük bir yeşil kaplumbağa çok küçüktür.</span>
+    </p>
+    <p class="sentence-paragraph">
+        <span class="english-text">But when they are <span class="highlight">adults</span>, they are <span class="highlight">big</span>!</span>
+        <span class="translation-tooltip">Ama yetişkin olduklarında büyüktürler!</span>
+    </p>
+    <p class="sentence-paragraph">
+        <span class="english-text">Some can be 1 meter <span class="highlight">long</span>.</span>
+        <span class="translation-tooltip">Bazıları 1 metre uzunluğunda olabilir.</span>
+    </p>
+    <p class="sentence-paragraph">
+        <span class="english-text">They can <span class="highlight">live</span> for a very <span class="highlight">long</span> time, maybe 80 years!</span>
+        <span class="translation-tooltip">Çok uzun yaşayabilirler, belki 80 yıl!</span>
+    </p>
+    
+    <div style="margin-top: 20px;"></div>
+    
+    <p class="sentence-paragraph">
+        <span class="english-text">What do they <span class="highlight">eat</span>?</span>
+        <span class="translation-tooltip">Ne yerler?</span>
+    </p>
+    <p class="sentence-paragraph">
+        <span class="english-text">When they are <span class="highlight">young</span>, they <span class="highlight">eat</span> small sea <span class="highlight">animal</span>s.</span>
+        <span class="translation-tooltip">Genç olduklarında, küçük deniz hayvanlarını yerler.</span>
+    </p>
+    <p class="sentence-paragraph">
+        <span class="english-text">But when they are <span class="highlight">big</span>, they mainly <span class="highlight">eat</span> <span class="highlight">plant</span>s in the <span class="highlight">sea</span>, <span class="highlight">like</span> <span class="highlight">seaweed</span>.</span>
+        <span class="translation-tooltip">Ama büyüdüklerinde, esas olarak deniz yosunu gibi denizdeki bitkileri yerler.</span>
+    </p>
+    <p class="sentence-paragraph">
+        <span class="english-text">They are mostly herbivores.</span>
+        <span class="translation-tooltip">Çoğunlukla otçuldurlar.</span>
+    </p>
+    
+    <div style="margin-top: 20px;"></div>
+    
+    <p class="sentence-paragraph">
+        <span class="english-text">Green <span class="highlight">turtles</span> are <span class="highlight">important</span>.</span>
+        <span class="translation-tooltip">Yeşil kaplumbağalar önemlidir.</span>
+    </p>
+    <p class="sentence-paragraph">
+        <span class="english-text">We must help them.</span>
+        <span class="translation-tooltip">Onlara yardım etmeliyiz.</span>
+    </p>
+    <p class="sentence-paragraph">
+        <span class="english-text">Many <span class="highlight">turtles</span> are in <span class="highlight">danger</span>.</span>
+        <span class="translation-tooltip">Birçok kaplumbağa tehlikededir.</span>
+    </p>
+    <p class="sentence-paragraph">
+        <span class="english-text">People must <span class="highlight">keep safe</span> the <span class="highlight">beaches</span> <span class="highlight">clean</span> so <span class="highlight">turtles</span> can make their <span class="highlight">nest</span>s and lay their <span class="highlight">egg</span>s there.</span>
+        <span class="translation-tooltip">İnsanlar, kaplumbağaların yuvalarını yapıp yumurtlayabilmeleri için plajları temiz tutmalıdır.</span>
+    </p>
+
+</div>
+
+<div id="quizContainer" class="quiz-container">
+    <div class="quiz-header">
+        <span id="quizBackButton" style="cursor: pointer; font-size: 24px;">&times;</span>
+        <span id="quizProgress">1/26</span>
+    </div>
+    
+    <div class="progress-bar-container">
+        <div id="progressBar" class="progress-bar"></div>
+    </div>
+    
+    <div id="questionArea">
+        <span class="quiz-word-type" id="currentWordType"></span>
+        <div class="quiz-word-box" id="currentWord"></div>
+        <div id="optionsContainer">
+            </div>
+    </div>
+    
+    <div id="resultsScreen" class="quiz-results">
+        <h2>Tebrikler!</h2>
+        <p>Testi bitirdiniz. <span id="correctCount">0</span> doğru cevabınız var.</p>
+        <button id="restartQuizButton">Tekrar Başla</button>
+    </div>
+</div>
+
+<div id="questionsQuizContainer" class="quiz-container" style="display: none;">
+    <div class="quiz-header">
+        <span id="questionsQuizBackButton" style="cursor: pointer; font-size: 24px;">&times;</span>
+        <span id="questionsQuizProgress">1/5</span>
+    </div>
+    <div class="progress-bar-container">
+        <div id="questionsProgressBar" class="progress-bar" style="background-color: #79a109;"></div>
+    </div>
+    
+    <div id="questionContentArea">
+        <div class="question-text" id="currentQuestionText" style="font-size: 20px; font-weight: bold; margin-bottom: 20px; color: #333;"></div>
+        <div id="questionOptionsContainer">
+        </div>
+    </div>
+
+    <div id="questionsResultsScreen" class="quiz-results">
+        <h2>Reading Comprehension Results!</h2>
+        <p>Total Questions: <span id="questionTotalCount">0</span></p>
+        <p>Correct Answers: <span id="questionCorrectCount">0</span></p>
+        <p>Wrong Answers: <span id="questionWrongCount">0</span></p>
+        <button id="restartQuestionsQuizButton">Restart Questions Quiz</button>
+    </div>
+</div>
+
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const sidebar = document.getElementById("wordsSidebar");
+        const mainContent = document.getElementById("mainContent");
+        const quizContainer = document.getElementById("quizContainer");
+        const questionsQuizContainer = document.getElementById("questionsQuizContainer"); // Yeni sorular container
+        const toggleSidebarButton = document.getElementById("toggleSidebarButton");
+        const closeSidebarButton = document.getElementById("closeSidebarButton");
+        const toggleQuizButton = document.getElementById("toggleQuizButton");
+        const toggleQuestionsButton = document.getElementById("toggleQuestionsButton"); // Yeni sorular butonu
+        
+        const sentenceParagraphs = document.querySelectorAll('.sentence-paragraph');
+        const readStatusElement = document.getElementById('readStatus'); // Okundu element ID'si
+        
+        // Word Quiz Elementleri
+        const quizProgress = document.getElementById('quizProgress');
+        const progressBar = document.getElementById('progressBar');
+        const currentWord = document.getElementById('currentWord');
+        const currentWordType = document.getElementById('currentWordType');
+        const optionsContainer = document.getElementById('optionsContainer');
+        const questionArea = document.getElementById('questionArea');
+        const resultsScreen = document.getElementById('resultsScreen');
+        const correctCountSpan = document.getElementById('correctCount');
+        const restartQuizButton = document.getElementById('restartQuizButton');
+
+        // Questions Quiz Elementleri
+        const questionsQuizBackButton = document.getElementById('questionsQuizBackButton');
+        const currentQuestionText = document.getElementById('currentQuestionText');
+        const questionOptionsContainer = document.getElementById('questionOptionsContainer');
+        const questionsQuizProgress = document.getElementById('questionsQuizProgress');
+        const questionsProgressBar = document.getElementById('questionsProgressBar');
+        const questionContentArea = document.getElementById('questionContentArea');
+        const questionsResultsScreen = document.getElementById('questionsResultsScreen');
+        const restartQuestionsQuizButton = document.getElementById('restartQuestionsQuizButton');
+        const questionCorrectCountSpan = document.getElementById('questionCorrectCount');
+        const questionTotalCountSpan = document.getElementById('questionTotalCount');
+        const questionWrongCountSpan = document.getElementById('questionWrongCount');
+
+
+        // Word Quiz Verisi (Korumaya alındı)
+        const quizData = [
+            { word: "turtle", type: "noun.", correct: "deniz kaplumbağası, kaplumbağa" },
+            { word: "large / big", type: "adj.", correct: "büyük, iri" },
+            { word: "live", type: "verb.", correct: "yaşamak" },
+            { word: "ocean / sea", type: "noun.", correct: "okyanus / deniz" },
+            { word: "like", type: "verb.", correct: "hoşlanmak, sevmek" },
+            { word: "warm", type: "adj.", correct: "ılık, sıcacık" },
+            { word: "beach", type: "noun.", correct: "plaj, sahil" },
+            { word: "swim", type: "verb.", correct: "yüzmek" },
+            { word: "fast", type: "adj.", correct: "hızlı" },
+            { word: "flipper", type: "noun.", correct: "yüzgeç (hayvan)" },
+            { word: "adult", type: "noun.", correct: "yetişkin" },
+            { word: "eat", type: "verb.", correct: "yemek" },
+            { word: "plant / seaweed", type: "noun.", correct: "bitki / deniz yosunu" },
+            { word: "danger", type: "noun.", correct: "tehlike" },
+            { word: "nest", type: "noun.", correct: "yuva" },
+            { word: "egg", type: "noun.", correct: "yumurta" },
+            { word: "clean", type: "adj.", correct: "temiz" },
+            { word: "keep safe", type: "verb.", correct: "güvende tutmak, korumak" },
+            { word: "animal", type: "noun.", correct: "hayvan" },
+            { word: "brown / yellow", type: "adj.", correct: "kahverengi / sarı" },
+            { word: "kind", type: "noun.", correct: "tür, çeşit" },
+            { word: "strong", type: "adj.", correct: "güçlü, sağlam" },
+            { word: "leg", type: "noun.", correct: "bacak" },
+            { word: "long", type: "adj.", correct: "uzun" },
+            { word: "young", type: "adj.", correct: "genç, yavru" },
+            { word: "important", type: "adj.", correct: "önemli" }
+        ];
+        let currentQuestionIndex = 0;
+        let score = 0;
+        const allTranslations = quizData.map(q => q.correct);
+
+        // Questions Quiz Verisi
+        const questionsData = [
+            {
+                question: "What color are Green Turtles often, despite their name?",
+                options: ["Green", "Blue", "Brown / yellow", "Red"],
+                correctAnswer: "Brown / yellow"
+            },
+            {
+                question: "Which of these do adult Green Turtles mainly eat?",
+                options: ["Small sea animals", "Fish", "Plants in the sea (seaweed)", "Seagulls"],
+                correctAnswer: "Plants in the sea (seaweed)"
+            },
+            {
+                question: "How long can a Green Turtle live?",
+                options: ["About 10 years", "Maybe 80 years", "Up to 200 years", "They live for a short time"],
+                correctAnswer: "Maybe 80 years"
+            },
+            {
+                question: "What do Green Turtles use to swim very fast?",
+                options: ["Their strong legs (flippers)", "Their shell", "Their tail", "Their mouth"],
+                correctAnswer: "Their strong legs (flippers)"
+            },
+            {
+                question: "What must people keep clean to help turtles?",
+                options: ["The ocean floor", "Their boats", "The beaches", "The forests"],
+                correctAnswer: "The beaches"
+            }
+        ];
+        let currentQuestionQuizIndex = 0;
+        let questionScore = 0;
+        
+        // --- Cümle Çeviri Fonksiyonları ---
+        
+        function closeAllTranslations() {
+            sentenceParagraphs.forEach(container => {
+                container.classList.remove('active');
+            });
+        }
+        
+        function handleSentenceClick(element) {
+            const isActive = element.classList.contains('active');
+            closeAllTranslations();
+            if (!isActive) {
+                element.classList.add('active');
+            }
+        }
+
+        sentenceParagraphs.forEach(paragraph => {
+            paragraph.addEventListener('click', function(event) {
+                handleSentenceClick(this);
+            });
+        });
+
+        document.body.addEventListener('click', function(e) {
+            if (!e.target.closest('.sentence-paragraph') && 
+                !e.target.closest('.top-buttons') && 
+                !e.target.closest('.words-sidebar') && 
+                !e.target.closest('.quiz-container')) {
+                closeAllTranslations();
+            }
+        });
+        
+        // Okundu İşaretleme İşlevi (Geri Eklendi)
+        readStatusElement.addEventListener('click', function() {
+            this.classList.toggle('read-status-active');
+
+            if (this.classList.contains('read-status-active')) {
+                this.textContent = 'Okundu ✓';
+            } else {
+                this.textContent = 'Okundu olarak işaretle';
+            }
+        });
+        
+        // --- Genel Fonksiyonlar ---
+
+        function showSection(sectionId) {
+            mainContent.style.display = 'none';
+            quizContainer.style.display = 'none';
+            questionsQuizContainer.style.display = 'none'; // Yeni quiz'i de gizle
+            sidebar.classList.remove("open");
+
+            if (sectionId === 'main') {
+                mainContent.style.display = 'block';
+            } else if (sectionId === 'word_quiz') {
+                quizContainer.style.display = 'block';
+                if (currentQuestionIndex === quizData.length) {
+                    showWordQuizResults(); 
+                } else {
+                    displayWordQuestion();
+                }
+            } else if (sectionId === 'questions_quiz') {
+                questionsQuizContainer.style.display = 'block';
+                if (currentQuestionQuizIndex === questionsData.length) {
+                    showQuestionQuizResults();
+                } else {
+                    displayQuestionQuiz();
+                }
+            }
+            closeAllTranslations();
+        }
+        
+        function toggleNav() {
+            if (sidebar.classList.contains("open")) {
+                sidebar.classList.remove("open");
+                mainContent.classList.remove("pushed");
+            } else {
+                sidebar.classList.add("open");
+                mainContent.classList.add("pushed");
+            }
+            closeAllTranslations(); 
+        }
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        // --- WORD QUIZ FONKSİYONLARI ---
+
+        function generateWordOptions(correctAnswer) {
+            const incorrectOptions = allTranslations.filter(t => t !== correctAnswer);
+            let chosenIncorrect = shuffleArray(incorrectOptions).slice(0, 3);
+            let options = [...chosenIncorrect, correctAnswer];
+            return shuffleArray(options); 
+        }
+
+        function displayWordQuestion() {
+            questionArea.style.display = 'block';
+            resultsScreen.style.display = 'none';
+
+            if (currentQuestionIndex >= quizData.length) {
+                showWordQuizResults();
+                return;
+            }
+
+            const currentQ = quizData[currentQuestionIndex];
+            currentWordType.textContent = currentQ.type;
+            currentWord.textContent = currentQ.word;
+            quizProgress.textContent = `${currentQuestionIndex + 1}/${quizData.length}`;
+            const progressPercentage = (currentQuestionIndex / quizData.length) * 100;
+            progressBar.style.width = `${progressPercentage}%`;
+
+            optionsContainer.innerHTML = '';
+            const options = generateWordOptions(currentQ.correct);
+
+            options.forEach(option => {
+                const button = document.createElement('button');
+                button.classList.add('option-button');
+                button.textContent = option;
+                button.setAttribute('data-answer', option);
+                button.onclick = () => checkWordAnswer(button, option, currentQ.correct);
+                optionsContainer.appendChild(button);
+            });
+        }
+
+        function checkWordAnswer(selectedButton, selectedAnswer, correctAnswer) {
+            Array.from(optionsContainer.children).forEach(btn => btn.disabled = true);
+            
+            if (selectedAnswer === correctAnswer) {
+                selectedButton.classList.add('correct', 'selected');
+                score++;
+                const checkMark = document.createElement('span');
+                checkMark.classList.add('check-mark');
+                checkMark.textContent = '✓';
+                selectedButton.appendChild(checkMark);
+
+            } else {
+                selectedButton.classList.add('wrong');
+                const correctButton = Array.from(optionsContainer.children).find(btn => btn.getAttribute('data-answer') === correctAnswer);
+                if (correctButton) {
+                    correctButton.classList.add('correct');
+                }
+            }
+
+            setTimeout(() => {
+                currentQuestionIndex++;
+                displayWordQuestion();
+            }, 1000);
+        }
+        
+        function showWordQuizResults() {
+            questionArea.style.display = 'none';
+            resultsScreen.style.display = 'block';
+            correctCountSpan.textContent = score;
+            progressBar.style.width = '100%'; 
+        }
+
+        function restartWordQuiz() {
+            currentQuestionIndex = 0;
+            score = 0;
+            shuffleArray(quizData);
+            displayWordQuestion();
+        }
+        
+        // --- QUESTIONS QUIZ FONKSİYONLARI ---
+
+        function startQuestionsQuiz() {
+            currentQuestionQuizIndex = 0;
+            questionScore = 0;
+            shuffleArray(questionsData);
+            displayQuestionQuiz();
+        }
+
+        function displayQuestionQuiz() {
+            questionContentArea.style.display = 'block';
+            questionsResultsScreen.style.display = 'none';
+
+            if (currentQuestionQuizIndex >= questionsData.length) {
+                showQuestionQuizResults();
+                return;
+            }
+
+            const currentQ = questionsData[currentQuestionQuizIndex];
+            currentQuestionText.textContent = currentQ.question;
+            questionsQuizProgress.textContent = `${currentQuestionQuizIndex + 1}/${questionsData.length}`;
+            const progressPercentage = (currentQuestionQuizIndex / questionsData.length) * 100;
+            questionsProgressBar.style.width = `${progressPercentage}%`;
+
+            questionOptionsContainer.innerHTML = '';
+            const options = shuffleArray([...currentQ.options]);
+
+            options.forEach(option => {
+                const button = document.createElement('button');
+                button.classList.add('question-option', 'option-button'); // İki sınıfı da kullanıyoruz
+                button.textContent = option;
+                button.setAttribute('data-answer', option);
+                button.onclick = () => checkQuestionAnswer(button, option, currentQ.correctAnswer);
+                questionOptionsContainer.appendChild(button);
+            });
+        }
+
+        function checkQuestionAnswer(selectedButton, selectedAnswer, correctAnswer) {
+            Array.from(questionOptionsContainer.children).forEach(btn => btn.disabled = true);
+            
+            if (selectedAnswer === correctAnswer) {
+                selectedButton.classList.add('correct');
+                questionScore++;
+            } else {
+                selectedButton.classList.add('wrong');
+                const correctButton = Array.from(questionOptionsContainer.children).find(btn => btn.getAttribute('data-answer') === correctAnswer);
+                if (correctButton) {
+                    correctButton.classList.add('correct');
+                }
+            }
+
+            setTimeout(() => {
+                currentQuestionQuizIndex++;
+                displayQuestionQuiz();
+            }, 1000);
+        }
+
+        function showQuestionQuizResults() {
+            questionContentArea.style.display = 'none';
+            questionsResultsScreen.style.display = 'block';
+
+            const totalQuestions = questionsData.length;
+            const wrongCount = totalQuestions - questionScore;
+
+            questionTotalCountSpan.textContent = totalQuestions;
+            questionWrongCountSpan.textContent = wrongCount;
+            questionCorrectCountSpan.textContent = questionScore;
+            questionsProgressBar.style.width = '100%';
+        }
+
+
+        // --- Olay Dinleyicisi Atamaları ---
+        toggleSidebarButton.addEventListener('click', toggleNav);
+        closeSidebarButton.addEventListener('click', toggleNav);
+        toggleQuizButton.addEventListener('click', () => {
+            showSection('word_quiz');
+            restartWordQuiz();
+        });
+        
+        toggleQuestionsButton.addEventListener('click', () => {
+            showSection('questions_quiz');
+            startQuestionsQuiz();
+        });
+        
+
+        quizBackButton.addEventListener('click', () => {
+            showSection('main');
+        });
+        
+        questionsQuizBackButton.addEventListener('click', () => {
+            showSection('main');
+        });
+
+        restartQuizButton.addEventListener('click', restartWordQuiz);
+        
+        restartQuestionsQuizButton.addEventListener('click', startQuestionsQuiz);
+
+
+        // Başlangıçta ana içeriği göster
+        showSection('main');
+    });
+</script>
+
+</body>
+</html>
