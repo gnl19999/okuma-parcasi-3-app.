@@ -25,7 +25,26 @@
         h1 { color: #333; font-size: 28px; margin-bottom: 5px; }
         .info-bar { display: flex; align-items: center; margin-bottom: 20px; color: #666; font-size: 14px; }
         .info-bar span { margin-right: 15px; }
-        .info-bar .status { font-weight: bold; color: #79a109; margin-left: auto; background-color: #e6ffe6; padding: 5px 10px; border-radius: 5px; }
+        
+        /* DURUM ÇUBUĞU STİLİ (GÜNCELLENDİ) */
+        .info-bar .status { 
+            font-weight: bold; 
+            color: #666; /* Varsayılan Metin Grisi */
+            margin-left: auto; 
+            background-color: #e0e0e0; /* Varsayılan Arka Plan Grisi */
+            padding: 5px 10px; 
+            border-radius: 5px; 
+            transition: all 0.2s; /* Geçiş efekti eklendi */
+            cursor: pointer;
+            user-select: none;
+        }
+
+        /* AKTİF DURUM STİLİ (YENİ - Okundu işaretlendiğinde) */
+        .info-bar .status.read-status-active {
+            color: white; 
+            background-color: #79a109; /* Yeşil renk */
+            content: "Okundu ✓"; /* Yazı değişimi JS ile yapılacak */
+        }
 
         /* VURGULU KELİMELER ve GÖRSEL STİLİ */
         .highlight { color: #79a109; font-weight: 500; }
@@ -91,7 +110,7 @@
         .top-buttons button { background-color: #007bff; color: white; border: none; padding: 8px 15px; font-size: 16px; cursor: pointer; border-radius: 20px; margin-left: 10px; }
         #toggleSidebarButton { background-color: #f1f1f1; color: #333; }
         #toggleQuizButton { background-color: #5bc0de; } 
-        #toggleQuestionsButton { background-color: #79a109; } /* YENİ */
+        #toggleQuestionsButton { background-color: #79a109; } 
         .close-btn { position: absolute; top: 15px; left: 20px; font-size: 30px; color: #aaa; cursor: pointer; }
         
         /* Word Quiz Stil */
@@ -144,7 +163,8 @@
 <div class="top-buttons">
     <button id="toggleSidebarButton">W Kelimeler</button>
     <button id="toggleQuizButton" style="background-color: #5bc0de;">Word Quiz</button>
-    <button id="toggleQuestionsButton" style="background-color: #79a109;">Questions</button> </div>
+    <button id="toggleQuestionsButton" style="background-color: #79a109;">Questions</button> 
+</div>
 
 <div id="wordsSidebar" class="words-sidebar">
     <span class="close-btn" id="closeSidebarButton">&times;</span>
@@ -184,8 +204,7 @@
     <div class="info-bar">
         <span>🕒 1 min</span>
         <span>W 108 words</span>
-        <span class="status">Okundu olarak işaretle</span>
-    </div>
+        <span class="status" id="readStatus">Okundu olarak işaretle</span>     </div>
     
     <img src="https://via.placeholder.com/600x250/79a109/ffffff?text=Green+Turtle+Underwater+Image" alt="Green Turtle underwater" class="article-image">
     
@@ -340,13 +359,15 @@
         const sidebar = document.getElementById("wordsSidebar");
         const mainContent = document.getElementById("mainContent");
         const quizContainer = document.getElementById("quizContainer");
-        const questionsQuizContainer = document.getElementById("questionsQuizContainer"); // YENİ
+        const questionsQuizContainer = document.getElementById("questionsQuizContainer"); 
         const toggleSidebarButton = document.getElementById("toggleSidebarButton");
         const closeSidebarButton = document.getElementById("closeSidebarButton");
         const toggleQuizButton = document.getElementById("toggleQuizButton");
-        const toggleQuestionsButton = document.getElementById("toggleQuestionsButton"); // YENİ
+        const toggleQuestionsButton = document.getElementById("toggleQuestionsButton"); 
         
         const sentenceParagraphs = document.querySelectorAll('.sentence-paragraph');
+        // OKUNDU DURUMU ELEMENTİ (YENİ)
+        const readStatusElement = document.getElementById('readStatus');
         
         // Word Quiz Elementleri
         const quizProgress = document.getElementById('quizProgress');
@@ -357,13 +378,12 @@
         const questionArea = document.getElementById('questionArea');
         const resultsScreen = document.getElementById('resultsScreen');
         const correctCountSpan = document.getElementById('correctCount');
-        // Word Quiz Sonuç Alanları
         const totalQuestionsCountSpan = document.getElementById('totalQuestionsCount');
         const wrongCountSpan = document.getElementById('wrongCount');
         const restartQuizButton = document.getElementById('restartQuizButton');
 
 
-        // Questions Quiz Elementleri (YENİ)
+        // Questions Quiz Elementleri 
         const questionsQuizBackButton = document.getElementById('questionsQuizBackButton');
         const questionsQuizProgress = document.getElementById('questionsQuizProgress');
         const questionsProgressBar = document.getElementById('questionsProgressBar');
@@ -410,7 +430,7 @@
         let score = 0;
         const allTranslations = quizData.map(q => q.correct);
         
-        // Questions Quiz Verisi (YENİ)
+        // Questions Quiz Verisi (Değişmedi)
         const questionsData = [
             {
                 question: "What color are Green Turtles often, despite their name?",
@@ -441,7 +461,7 @@
         let currentQuestionQuizIndex = 0;
         let questionScore = 0;
 
-        // --- Cümle Çeviri Fonksiyonları (Değişmedi) ---
+        // --- Cümle Çeviri Fonksiyonları ---
         
         function closeAllTranslations() {
             sentenceParagraphs.forEach(container => {
@@ -472,12 +492,23 @@
             }
         });
         
-        // --- Genel Fonksiyonlar (Güncellendi) ---
+        // OKUNDU İŞARETLEME FONKSİYONU (YENİ)
+        readStatusElement.addEventListener('click', function() {
+            this.classList.toggle('read-status-active');
+
+            if (this.classList.contains('read-status-active')) {
+                this.textContent = 'Okundu ✓';
+            } else {
+                this.textContent = 'Okundu olarak işaretle';
+            }
+        });
+        
+        // --- Genel Fonksiyonlar ---
 
         function showSection(sectionId) {
             mainContent.style.display = 'none';
             quizContainer.style.display = 'none';
-            questionsQuizContainer.style.display = 'none'; // YENİ
+            questionsQuizContainer.style.display = 'none'; 
             sidebar.classList.remove("open");
 
             if (sectionId === 'main') {
@@ -489,7 +520,7 @@
                 } else {
                     displayQuestion();
                 }
-            } else if (sectionId === 'questions_quiz') { // YENİ
+            } else if (sectionId === 'questions_quiz') { 
                 questionsQuizContainer.style.display = 'block';
                 if (currentQuestionQuizIndex === questionsData.length) {
                     showQuestionResults();
@@ -519,7 +550,7 @@
             return array;
         }
 
-        // --- WORD QUIZ FONKSİYONLARI ---
+        // --- WORD QUIZ FONKSİYONLARI (Değişmedi) ---
 
         function generateOptions(correctAnswer) {
             const incorrectOptions = allTranslations.filter(t => t !== correctAnswer);
@@ -602,7 +633,7 @@
             displayQuestion();
         }
         
-        // --- QUESTIONS QUIZ FONKSİYONLARI (YENİ) ---
+        // --- QUESTIONS QUIZ FONKSİYONLARI (Değişmedi) ---
 
         function startQuestionsQuiz() {
             currentQuestionQuizIndex = 0;
@@ -631,7 +662,7 @@
 
             options.forEach(option => {
                 const button = document.createElement('button');
-                button.classList.add('question-option', 'option-button'); // Ortak stil sınıfı kullanıldı
+                button.classList.add('question-option', 'option-button'); 
                 button.textContent = option;
                 button.setAttribute('data-answer', option);
                 button.onclick = () => checkQuestionAnswer(button, option, currentQ.correctAnswer);
@@ -645,7 +676,6 @@
             if (selectedAnswer === correctAnswer) {
                 selectedButton.classList.add('correct');
                 questionScore++;
-                // Checkmark Word Quiz'den devralındı
             } else {
                 selectedButton.classList.add('wrong');
                 const correctButton = Array.from(questionOptionsContainer.children).find(btn => btn.getAttribute('data-answer') === correctAnswer);
@@ -681,7 +711,7 @@
             showSection('word_quiz');
             restartQuiz();
         });
-        // Questions butonu olay dinleyicisi (YENİ)
+        
         toggleQuestionsButton.addEventListener('click', () => {
             showSection('questions_quiz');
             startQuestionsQuiz();
@@ -690,13 +720,13 @@
         quizBackButton.addEventListener('click', () => {
             showSection('main');
         });
-        // Questions Quiz geri butonu (YENİ)
+        
         questionsQuizBackButton.addEventListener('click', () => {
             showSection('main');
         });
 
         restartQuizButton.addEventListener('click', restartQuiz);
-        // Questions Quiz tekrar başlat butonu (YENİ)
+        
         restartQuestionsQuizButton.addEventListener('click', startQuestionsQuiz);
 
 
